@@ -21,7 +21,7 @@ group jupyterlab(cloud)[JupyterLab]
 service puller(server)[pull_wow_ah_parquet] in jupyterlab
 service tmp_store(disk)[Parquet files] in jupyterlab
 service loader(server)[load_ah_data] in jupyterlab
-service duck(server)[DuckDB] in jupyterlab
+service duck(database)[DuckDB] in jupyterlab
 
 
 puller:L --> R:bli_api
@@ -31,6 +31,27 @@ loader:T -- B:duck
 ```
 
 ### Production target
+
+For a larger scale deployment:
+
+- Use a real-time analytics store such as [ClickHouse](https://clickhouse.com/)
+- Visualize data from dashboards in [Metabase](https://www.metabase.com/)
+
+```mermaid
+architecture-beta
+
+group blizzard(cloud)[Battle Net]
+service bli_api(database)[API] in blizzard
+
+group wowanal(cloud)[WoW Analytics]
+service feeder(server)[Feeder] in wowanal
+service store(database)[Clickhouse] in wowanal
+service dashboard(server)[Metabase] in wowanal
+
+feeder:L --> R:bli_api
+feeder:R --> L:store
+dashboard:L --> R:store
+```
 
 ## Requirements
 
