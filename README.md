@@ -36,6 +36,7 @@ For a larger scale deployment:
 
 - Use a real-time analytics store such as [ClickHouse](https://clickhouse.com/)
 - Visualize data from dashboards in [Metabase](https://www.metabase.com/)
+- Use docker-compose for single machine deployment
 
 ```mermaid
 architecture-beta
