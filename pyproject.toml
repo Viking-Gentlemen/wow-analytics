@@ -11,5 +11,5 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "jupyterlab>=4.5.1",
+    "ipykernel>=7.1.0",
 ]

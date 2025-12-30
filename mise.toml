@@ -1,0 +1,14 @@
+[tools]
+uv = "latest"
+
+[settings]
+python.uv_venv_auto = true
+
+[tasks.setup]
+run = '''
+#!/usr/bin/env sh
+uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=wow-analytics
+'''
+
+[tasks.notes]
+run = 'jupyter-lab --notebook-dir="notebooks/"'
