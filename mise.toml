@@ -1,14 +1,14 @@
 [tools]
+python = "3.12.9"
 uv = "latest"
+"pipx:jupyterlab" = "latest"
 
 [settings]
 python.uv_venv_auto = true
 
 [tasks.setup]
-run = '''
-#!/usr/bin/env sh
-uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=wow-analytics
-'''
+description="Install `uv` virtual environment & a kernel for Jupyterlab"
+run = "uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=wow-analytics"
 
 [tasks.notes]
 run = 'jupyter-lab --notebook-dir="notebooks/" --no-browser &'
