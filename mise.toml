@@ -11,4 +11,4 @@ uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=wow-a
 '''
 
 [tasks.notes]
-run = 'jupyter-lab --notebook-dir="notebooks/"'
+run = 'jupyter-lab --notebook-dir="notebooks/" --no-browser &'
