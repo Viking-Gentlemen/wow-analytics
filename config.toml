@@ -1,0 +1,21 @@
+[blizzard]
+
+# Set Blizzard API region & locale
+# More: https://community.developer.battle.net/documentation/guides/regionality-and-apis
+api_region = "eu"
+api_base_url = "https://eu.api.blizzard.com"
+api_locale = "en_GB"
+
+# ⚠️ Highly recommended to use environment variables instead of hardcoding those secret values !
+#api_client_id = ""
+#api_client_secret = ""
+
+[storage]
+
+# Either local or s3
+type = "local"
+
+[storage.local]
+
+# 
+root_directory = "/tmp/wow-analytics-ah"
