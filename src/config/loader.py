@@ -2,14 +2,11 @@
 Configuration loader with TOML support, environment variable overrides, and validation.
 """
 
-import os
-import tomllib
 from enum import Enum
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
 
 
 class StorageType(str, Enum):
@@ -93,49 +90,58 @@ class StorageConfig(BaseModel):
 
 
 class Config(BaseSettings):
-    """Main application configuration."""
+    """Main application configuration.
+
+    Configuration is loaded in the following priority (highest to lowest):
+    1. Environment variables (prefix: WA_, nested delimiter: __)
+    2. .env file
+    3. config.toml file
+    4. Default values
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="WA_",
         env_file=".env",
+        env_nested_delimiter="__",
         case_sensitive=False,
+        toml_file="config.toml",
     )
 
     blizzard: BlizzardConfig = Field(default_factory=BlizzardConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customize settings sources to include TOML file."""
+        from pydantic_settings import TomlConfigSettingsSource
 
-def load_config(config_path: str | Path = "config.toml") -> Config:
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            TomlConfigSettingsSource(settings_cls),
+            file_secret_settings,
+        )
+
+
+def load_config() -> Config:
     """
     Load configuration from TOML file with environment variable overrides.
 
     Environment variables follow the pattern:
-    - WA_BLIZZARD_API_REGION
-    - WA_BLIZZARD_API_CLIENT_ID
-    - WA_STORAGE_TYPE
-    - WA_STORAGE_LOCAL_ROOT_DIRECTORY
-
-    Args:
-        config_path: Path to the TOML configuration file
+    - WA_BLIZZARD__API_REGION
+    - WA_BLIZZARD__API_CLIENT_ID
+    - WA_STORAGE__TYPE
+    - WA_STORAGE__LOCAL__ROOT_DIRECTORY
 
     Returns:
         Validated Config object
-
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If configuration is invalid
     """
-    config_path = Path(config_path)
-
-    if not config_path.exists():
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
-
-    # Load TOML file
-    with open(config_path, "rb") as f:
-        toml_data = tomllib.load(f)
-
-    # Create config with TOML data as defaults
-    # Environment variables will automatically override via pydantic-settings
-    config = Config(**toml_data)
-
-    return config
+    return Config()

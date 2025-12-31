@@ -17,5 +17,6 @@ type = "local"
 
 [storage.local]
 
-# 
+# Local directory where data files will be stored if type is set to "local"
+# Note: this directory must already exists and be writeable
 root_directory = "/tmp/wow-analytics-ah"
