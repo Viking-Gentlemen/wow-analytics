@@ -59,8 +59,14 @@ dashboard:L --> R:store
 In order to use this project you will need:
 
 - Install [Mise](https://mise.jdx.dev/getting-started.html)
-- Create an API Access from [Battle.net Developer portal](https://community.developer.battle.net/access/clients):
-    - You will get a set of OAuth credentials: **Client ID** & **Client Secret**
+- Get data from Battle.net API
+  - Create an API Access from [Battle.net Developer portal](https://community.developer.battle.net/access/clients):
+  - You will get a set of OAuth credentials: **Client ID** & **Client Secret**
+- Storage
+  - Either use local storage or an S3-compatible bucket
+  - Tips:
+    - For local storage: you can leverage a Google Drive-like service to backup those files
+    - For S3-compatible bucket: you can use Cloudflare R2 free tier as a starter/poc
 
 ## How to use
 
@@ -73,13 +79,21 @@ mise install
 # Set up Python environment
 mise run setup
 
-# Provide secret credentials
+# Provide configuration & secret credentials
 cat > .env << EOF
+########################
+# Blizzard credentials #
+########################
 BLIZZARD_API_CLIENT_ID=YOUR_CLIENT_ID
 BLIZZARD_API_CLIENT_SECRET=YOUR_CLIENT_SECRET
 BLIZZARD_API_REGION=eu
 
+# Storage
+
+# Either s3 or local
+WA_STORAGE_TYPE=s3
+
 # Make sure to provide an existing directory with write permissions
-WA_LOCAL_STORE_DIR=/tmp/wow-analytics-data
+WA_STORAGE_LOCAL_DIR=/tmp/wow-analytics-data
 EOF
 ```
