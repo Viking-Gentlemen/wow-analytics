@@ -78,5 +78,8 @@ cat > .env << EOF
 BLIZZARD_API_CLIENT_ID=YOUR_CLIENT_ID
 BLIZZARD_API_CLIENT_SECRET=YOUR_CLIENT_SECRET
 BLIZZARD_API_REGION=eu
+
+# Make sure to provide an existing directory with write permissions
+WA_LOCAL_STORE_DIR=/tmp/wow-analytics-data
 EOF
 ```
