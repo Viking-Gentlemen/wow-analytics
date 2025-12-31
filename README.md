@@ -18,11 +18,10 @@ group blizzard(cloud)[Battle Net]
 service bli_api(database)[API] in blizzard
 
 group jupyterlab(cloud)[JupyterLab]
-service puller(server)[pull_wow_ah_parquet] in jupyterlab
+service puller(server)[feeder ipynb] in jupyterlab
 service tmp_store(disk)[Parquet files] in jupyterlab
-service loader(server)[load_ah_data] in jupyterlab
+service loader(server)[explorer ipynb] in jupyterlab
 service duck(database)[DuckDB] in jupyterlab
-
 
 puller:L --> R:bli_api
 puller:R --> L:tmp_store
@@ -81,19 +80,14 @@ mise run setup
 
 # Provide configuration & secret credentials
 cat > .env << EOF
-########################
-# Blizzard credentials #
-########################
-BLIZZARD_API_CLIENT_ID=YOUR_CLIENT_ID
-BLIZZARD_API_CLIENT_SECRET=YOUR_CLIENT_SECRET
-BLIZZARD_API_REGION=eu
-
-# Storage
-
-# Either s3 or local
-WA_STORAGE_TYPE=s3
-
-# Make sure to provide an existing directory with write permissions
-WA_STORAGE_LOCAL_DIR=/tmp/wow-analytics-data
+WA_BLIZZARD__API_CLIENT_ID=YOUR_CLIENT_ID
+WA_BLIZZARD__API_CLIENT_SECRET=YOUR_CLIENT_SECRET
 EOF
 ```
+
+You can then configure more parameters by either:
+
+- **Recommended:** add more environment variables to the .env file
+  - This file won't be committed back to Git so it is an easy way to configure the application locally
+- Update the config.toml file
+  - This file is more suited to a standalone deployment of the application such as docker container
