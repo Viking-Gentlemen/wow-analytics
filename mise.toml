@@ -1,14 +1,21 @@
 [tools]
+"npm:markdownlint-cli" = "0.45.0"
+"pipx:commitizen" = "4.10.0"
+"pipx:jupyterlab" = "4.5.1"
+pre-commit = "4.3.0"
 python = "3.12.9"
-uv = "latest"
-"pipx:jupyterlab" = "latest"
+uv = "0.9.21"
 
 [settings]
 python.uv_venv_auto = true
 
 [tasks.setup]
-description="Install `uv` virtual environment & a kernel for Jupyterlab"
-run = "uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=wow-analytics"
+description = "Install `uv` virtual environment & a kernel for Jupyterlab"
+run = """
+  uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=wow-analytics
+  pre-commit install
+  """
 
-[tasks.notes]
-run = 'jupyter-lab --notebook-dir="notebooks/" --no-browser &'
+[tasks.notebook]
+description = "Run Jupyterlab"
+run = 'jupyter-lab --notebook-dir="src/notebooks/" --no-browser &'
