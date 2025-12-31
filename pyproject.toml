@@ -14,7 +14,12 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["duckdb>=1.4.3", "ipykernel>=7.1.0"]
+dev = [
+    "duckdb>=1.4.3",
+    "ipykernel>=7.1.0",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+]
 
 [build-system]
 requires = ["setuptools"]
