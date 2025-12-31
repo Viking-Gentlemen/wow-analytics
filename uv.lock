@@ -966,7 +966,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "authlib" },
-    { name = "duckdb" },
     { name = "httpx" },
     { name = "pandas" },
     { name = "pyarrow" },
@@ -976,13 +975,13 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "duckdb" },
     { name = "ipykernel" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "authlib", specifier = ">=1.6.6" },
-    { name = "duckdb", specifier = ">=1.4.3" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pyarrow", specifier = ">=22.0.0" },
@@ -991,4 +990,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ipykernel", specifier = ">=7.1.0" }]
+dev = [
+    { name = "duckdb", specifier = ">=1.4.3" },
+    { name = "ipykernel", specifier = ">=7.1.0" },
+]
