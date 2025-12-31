@@ -46,21 +46,15 @@ class ParquetWriter(StoragePort):
 
         # Validate root_dir exists
         if not self.root_dir.exists():
-            raise FileNotFoundError(
-                f"Root data directory does not exist: {self.root_dir}"
-            )
+            raise FileNotFoundError(f"Root data directory does not exist: {self.root_dir}")
 
         # Validate root_dir is a directory
         if not self.root_dir.is_dir():
-            raise NotADirectoryError(
-                f"Root data path is not a directory: {self.root_dir}"
-            )
+            raise NotADirectoryError(f"Root data path is not a directory: {self.root_dir}")
 
         # Validate root_dir is writable
         if not os.access(self.root_dir, os.W_OK):
-            raise PermissionError(
-                f"Root data directory is not writable: {self.root_dir}"
-            )
+            raise PermissionError(f"Root data directory is not writable: {self.root_dir}")
 
         self._data_dir = self.root_dir / self.region
         self._data_dir.mkdir(mode=0o774, exist_ok=True)
@@ -110,9 +104,7 @@ class ParquetWriter(StoragePort):
 
             # Handle item bonuses
             if auction.item.bonus_lists:
-                flat_auction["bonus_lists"] = ",".join(
-                    map(str, auction.item.bonus_lists)
-                )
+                flat_auction["bonus_lists"] = ",".join(map(str, auction.item.bonus_lists))
 
             if auction.item.modifiers:
                 for mod_type, mod_value in auction.item.modifiers.items():
@@ -182,7 +174,7 @@ class ParquetWriter(StoragePort):
         df = self._optimize_realm_dtypes(df)
 
         # Save
-        filepath = self._resolve_filepath(filename)
+        filepath = self._resolve_filepath(f"global/{filename}")
         df.to_parquet(
             filepath,
             engine="pyarrow",
@@ -212,7 +204,7 @@ class ParquetWriter(StoragePort):
 
         dataframes = {}
         for realm_id, auction_data in auctions_by_realm.items():
-            filename = f"auctions_realm_{realm_id}_{timestamp_str}.parquet"
+            filename = f"auctions/{realm_id}/auctions_realm_{realm_id}_{timestamp_str}.parquet"
             df = self.save_auctions(auction_data, filename)
             if df is not None:
                 dataframes[realm_id] = df
@@ -255,9 +247,7 @@ class ParquetWriter(StoragePort):
 
                 # Handle item bonuses
                 if auction.item.bonus_lists:
-                    flat_auction["bonus_lists"] = ",".join(
-                        map(str, auction.item.bonus_lists)
-                    )
+                    flat_auction["bonus_lists"] = ",".join(map(str, auction.item.bonus_lists))
 
                 if auction.bid:
                     flat_auction["bid"] = auction.bid
@@ -285,10 +275,7 @@ class ParquetWriter(StoragePort):
         )
 
         file_size = filepath.stat().st_size / (1024 * 1024)
-        print(
-            f"Saved {len(combined_df)} total auctions from {len(auctions_by_realm)} realms "
-            f"to {filepath} ({file_size:.2f} MB)"
-        )
+        print(f"Saved {len(combined_df)} total auctions from {len(auctions_by_realm)} realms " f"to {filepath} ({file_size:.2f} MB)")
 
         return combined_df
 
@@ -307,8 +294,14 @@ class ParquetWriter(StoragePort):
     def _resolve_filepath(self, filename: str) -> Path:
         """Resolve filename to full filepath."""
         if Path(filename).is_absolute():
-            return Path(filename)
-        return self._data_dir / filename
+            filepath = Path(filename)
+        else:
+            filepath = self._data_dir / filename
+
+        # Make sure parent directory exists
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        return filepath
 
     def _optimize_auction_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """Optimize data types for auction DataFrames."""
