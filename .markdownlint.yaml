@@ -1,0 +1,23 @@
+# MD013/line-length : Line length : https://github.com/DavidAnson/markdownlint/blob/v0.38.0/doc/md013.md
+MD013:
+  # Number of characters
+  line_length: 160
+  # Exclude code blocks from line length check
+  code_blocks: false
+  # Exclude tables from line length check
+  tables: false
+
+# MD024/no-duplicate-heading : Multiple headings with the same content
+# Disabled because troubleshooting docs legitimately use repeated section headings like "Symptoms:", "Root Causes:", etc.
+MD024: false
+
+# MD033/no-inline-html : Inline HTML
+# Disabled to allow <details> and <summary> tags for collapsible sections
+MD033: false
+
+# MD029/ol-prefix : Ordered list item prefix
+# Disabled to allow numbered lists to continue after code blocks and other interruptions
+MD029: false
+
+# MD036/no-emphasis-as-heading: Emphasis used instead of a heading
+MD036: false

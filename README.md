@@ -91,3 +91,9 @@ You can then configure more parameters by either:
   - This file won't be committed back to Git so it is an easy way to configure the application locally
 - Update the config.toml file
   - This file is more suited to a standalone deployment of the application such as docker container
+
+## Considerations
+
+### Storage
+
+A single run of the `feeder.ipynb` outputs roughly 52,4 MB of compressed data.
