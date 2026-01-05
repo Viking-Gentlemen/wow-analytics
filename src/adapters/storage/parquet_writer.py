@@ -188,7 +188,6 @@ class ParquetWriter(StoragePort):
     def save_multiple_realm_auctions(
         self,
         auctions_by_realm: dict[int, AuctionData],
-        timestamp_str: Optional[str] = None,
     ) -> dict[int, pd.DataFrame]:
         """Save auction data for multiple realms to separate Parquet files.
 
@@ -199,12 +198,14 @@ class ParquetWriter(StoragePort):
         Returns:
             Dictionary mapping realm_id to DataFrame.
         """
-        if timestamp_str is None:
-            timestamp_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.utcnow()
 
         dataframes = {}
         for realm_id, auction_data in auctions_by_realm.items():
-            filename = f"auctions/{realm_id}/auctions_realm_{realm_id}_{timestamp_str}.parquet"
+            filename = (
+                f"auctions/{timestamp.strftime("%Y-%m-%d")}/{timestamp.strftime("%H")}/{realm_id}/auctions_realm_{timestamp.strftime("%Y%m%d_%H%M%S")}.parquet"
+            )
+            # filename = f"auctions/{realm_id}/auctions_realm_{realm_id}_{timestamp_str}.parquet"
             df = self.save_auctions(auction_data, filename)
             if df is not None:
                 dataframes[realm_id] = df
