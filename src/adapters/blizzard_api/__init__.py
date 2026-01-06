@@ -1,20 +1,5 @@
-"""Blizzard API adapters for World of Warcraft data."""
+"""Blizzard API adapter - Implementation of BlizzardAPIPort."""
 
-from adapters.blizzard_api.auctions import AuctionsClient
-from adapters.blizzard_api.base import BlizzardAPIClient
-from adapters.blizzard_api.items import ItemsClient
-from adapters.blizzard_api.recipes import RecipesClient
+from adapters.blizzard_api.client import BlizzardAPIClient
 
-# Backwards compatibility alias
-BlizzardAuctionHouseClient = AuctionsClient
-
-__all__ = [
-    # Base client
-    "BlizzardAPIClient",
-    # Specialized clients
-    "AuctionsClient",
-    "ItemsClient",
-    "RecipesClient",
-    # Backwards compatibility
-    "BlizzardAuctionHouseClient",
-]
+__all__ = ["BlizzardAPIClient"]

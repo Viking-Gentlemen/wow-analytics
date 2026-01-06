@@ -1,21 +1,21 @@
-"""Configuration module for WoW Analytics."""
+"""Configuration module."""
 
 from config.loader import (
-    load_config,
     Config,
     BlizzardConfig,
     StorageConfig,
     LocalStorageConfig,
+    S3StorageConfig,
     StorageType,
     BlizzardAPIRegion,
 )
 
 __all__ = [
-    "load_config",
     "Config",
     "BlizzardConfig",
     "StorageConfig",
     "LocalStorageConfig",
+    "S3StorageConfig",
     "StorageType",
     "BlizzardAPIRegion",
 ]
