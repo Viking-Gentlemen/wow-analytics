@@ -1,39 +1,39 @@
-"""Domain models for WoW Analytics."""
+"""Domain layer - Pure business entities and value objects."""
 
 from domain.models import (
-    # Auction models
+    # Auction entities
     Auction,
-    AuctionData,
     AuctionItem,
-    # Item models
-    Item,
-    ItemMedia,
-    # Realm models
+    AuctionData,
+    # Realm entities
     ConnectedRealm,
-    PopulationType,
     RealmDetails,
     RealmStatus,
-    # Recipe and Profession models
-    Profession,
+    PopulationType,
+    # Item entities
+    Item,
+    ItemMedia,
+    # Recipe/Profession entities
     Recipe,
     RecipeReagent,
+    Profession,
 )
 
 __all__ = [
-    # Auction models
+    # Auction
     "Auction",
-    "AuctionData",
     "AuctionItem",
-    # Item models
-    "Item",
-    "ItemMedia",
-    # Realm models
+    "AuctionData",
+    # Realm
     "ConnectedRealm",
-    "PopulationType",
     "RealmDetails",
     "RealmStatus",
-    # Recipe and Profession models
-    "Profession",
+    "PopulationType",
+    # Item
+    "Item",
+    "ItemMedia",
+    # Recipe/Profession
     "Recipe",
     "RecipeReagent",
+    "Profession",
 ]

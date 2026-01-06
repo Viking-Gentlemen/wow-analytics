@@ -1,20 +1,31 @@
-"""Domain models representing core business entities."""
+"""
+Domain models - Pure business entities.
+
+These are immutable value objects representing the core business concepts.
+They contain NO knowledge of external systems (APIs, databases, file formats).
+Transformation logic from external formats belongs in the adapter layer.
+"""
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Optional
 
 
-class RealmStatus(str, Enum):
-    """Realm status types."""
+# =============================================================================
+# Realm Domain Models
+# =============================================================================
+
+
+class RealmStatus(Enum):
+    """Realm operational status."""
 
     UP = "UP"
     DOWN = "DOWN"
 
 
-class PopulationType(str, Enum):
-    """Realm population types."""
+class PopulationType(Enum):
+    """Realm population classification."""
 
     FULL = "FULL"
     HIGH = "HIGH"
@@ -25,17 +36,69 @@ class PopulationType(str, Enum):
 
 
 @dataclass(frozen=True)
-class AuctionItem:
-    """Represents an item in an auction."""
+class ConnectedRealm:
+    """
+    A connected realm grouping in World of Warcraft.
+
+    Connected realms share an auction house and can group together for content.
+    """
 
     id: int
-    bonus_lists: Optional[tuple[int, ...]] = None
-    modifiers: Optional[dict[int, int]] = None
+    realm_names: tuple[str, ...]
+    realm_slugs: tuple[str, ...]
+    status: RealmStatus
+    population: PopulationType
+    has_queue: bool
+
+
+@dataclass
+class RealmDetails:
+    """Container for managing a collection of connected realms."""
+
+    _realms: dict[int, ConnectedRealm] = field(default_factory=dict)
+
+    def add(self, realm: ConnectedRealm) -> None:
+        """Add a realm to the collection."""
+        self._realms[realm.id] = realm
+
+    def get(self, realm_id: int) -> Optional[ConnectedRealm]:
+        """Retrieve a realm by ID."""
+        return self._realms.get(realm_id)
+
+    def __iter__(self):
+        """Iterate over all realms."""
+        return iter(self._realms.values())
+
+    def __len__(self) -> int:
+        """Return the number of realms."""
+        return len(self._realms)
+
+
+# =============================================================================
+# Auction Domain Models
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class AuctionItem:
+    """
+    An item listed in an auction.
+
+    Contains item identity and optional modifiers that affect the item.
+    """
+
+    id: int
+    bonus_lists: tuple[int, ...] = field(default_factory=tuple)
+    modifiers: tuple[tuple[int, int], ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
 class Auction:
-    """Represents a single auction listing."""
+    """
+    A single auction listing.
+
+    Represents an item for sale on the auction house with pricing information.
+    """
 
     id: int
     item: AuctionItem
@@ -48,94 +111,29 @@ class Auction:
 
 @dataclass
 class AuctionData:
-    """Collection of auctions with metadata."""
+    """
+    Collection of auctions from a specific realm at a point in time.
 
-    connected_realm_id: Optional[int]
+    Contains all auction listings fetched from a connected realm.
+    """
+
+    connected_realm_id: int
     auctions: list[Auction]
-    fetch_timestamp: datetime = field(default_factory=datetime.utcnow)
+    fetch_timestamp: datetime
 
-    @classmethod
-    def from_api_response(cls, response: dict, connected_realm_id: Optional[int] = None) -> "AuctionData":
-        """Create AuctionData from raw API response."""
-        auctions = []
-        for auction_data in response.get("auctions", []):
-            item_data = auction_data.get("item", {})
-            item = AuctionItem(
-                id=item_data.get("id"),
-                bonus_lists=tuple(item_data.get("bonus_lists", [])) if "bonus_lists" in item_data else None,
-                modifiers={mod.get("type"): mod.get("value") for mod in item_data.get("modifiers", [])} if "modifiers" in item_data else None,
-            )
-            auction = Auction(
-                id=auction_data.get("id"),
-                item=item,
-                quantity=auction_data.get("quantity", 1),
-                time_left=auction_data.get("time_left"),
-                unit_price=auction_data.get("unit_price"),
-                buyout=auction_data.get("buyout"),
-                bid=auction_data.get("bid"),
-            )
-            auctions.append(auction)
 
-        return cls(
-            connected_realm_id=connected_realm_id,
-            auctions=auctions,
-        )
+# =============================================================================
+# Item Domain Models
+# =============================================================================
 
 
 @dataclass(frozen=True)
-class ConnectedRealm:
-    """Represents a connected realm (group of merged realms)."""
-
-    id: int
-    realm_names: tuple[str, ...] = field(default_factory=tuple)
-    realm_slugs: tuple[str, ...] = field(default_factory=tuple)
-    status: Optional[RealmStatus] = None
-    population: Optional[PopulationType] = None
-    has_queue: bool = False
-
-    @classmethod
-    def from_api_response(cls, realm_id: int, response: dict) -> "ConnectedRealm":
-        """Create ConnectedRealm from raw API response."""
-        realms = response.get("realms", [])
-        return cls(
-            id=realm_id,
-            realm_names=tuple(r.get("name", "") for r in realms),
-            realm_slugs=tuple(r.get("slug", "") for r in realms),
-            status=RealmStatus(response.get("status", {}).get("type")) if response.get("status", {}).get("type") else None,
-            population=PopulationType(response.get("population", {}).get("type")) if response.get("population", {}).get("type") else None,
-            has_queue=response.get("has_queue", False),
-        )
-
-
-@dataclass
-class RealmDetails:
-    """Collection of realm details."""
-
-    realms: dict[int, ConnectedRealm] = field(default_factory=dict)
-
-    def add(self, realm: ConnectedRealm) -> None:
-        """Add a realm to the collection."""
-        self.realms[realm.id] = realm
-
-    def get(self, realm_id: int) -> Optional[ConnectedRealm]:
-        """Get a realm by ID."""
-        return self.realms.get(realm_id)
-
-    def __iter__(self):
-        """Iterate over realms."""
-        return iter(self.realms.values())
-
-    def __len__(self):
-        """Return the number of realms."""
-        return len(self.realms)
-
-
-# Item models
-
-
-@dataclass
 class Item:
-    """Represents a World of Warcraft item."""
+    """
+    A World of Warcraft item.
+
+    Contains item metadata and economic information.
+    """
 
     id: int
     name: str
@@ -149,73 +147,38 @@ class Item:
     max_count: int
     is_equippable: bool
     is_stackable: bool
-    description: Optional[str] = None
-
-    @classmethod
-    def from_api_response(cls, data: dict[str, Any]) -> "Item":
-        """Create an Item from API response data."""
-        return cls(
-            id=data["id"],
-            name=data.get("name", "Unknown"),
-            quality=data.get("quality", {}).get("type", "COMMON"),
-            level=data.get("level", 0),
-            item_class=data.get("item_class", {}).get("name", "Unknown"),
-            item_subclass=data.get("item_subclass", {}).get("name", "Unknown"),
-            inventory_type=data.get("inventory_type", {}).get("type", "NON_EQUIP"),
-            purchase_price=data.get("purchase_price", 0),
-            sell_price=data.get("sell_price", 0),
-            max_count=data.get("max_count", 1),
-            is_equippable=data.get("is_equippable", False),
-            is_stackable=data.get("is_stackable", False),
-            description=data.get("description"),
-        )
+    description: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class ItemMedia:
-    """Represents media assets for an item."""
+    """Media assets for an item (icon, etc.)."""
 
     item_id: int
-    icon_url: Optional[str] = None
-
-    @classmethod
-    def from_api_response(cls, item_id: int, data: dict[str, Any]) -> "ItemMedia":
-        """Create ItemMedia from API response data."""
-        assets = data.get("assets", [])
-        icon_url = None
-        for asset in assets:
-            if asset.get("key") == "icon":
-                icon_url = asset.get("value")
-                break
-
-        return cls(item_id=item_id, icon_url=icon_url)
+    icon_url: str
 
 
-# Recipe and Profession models
+# =============================================================================
+# Recipe/Profession Domain Models
+# =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True)
 class RecipeReagent:
-    """Represents a reagent required for a recipe."""
+    """A reagent required for crafting a recipe."""
 
     item_id: int
     item_name: str
     quantity: int
 
-    @classmethod
-    def from_api_response(cls, data: dict[str, Any]) -> "RecipeReagent":
-        """Create a RecipeReagent from API response data."""
-        reagent = data.get("reagent", {})
-        return cls(
-            item_id=reagent.get("id", 0),
-            item_name=reagent.get("name", "Unknown"),
-            quantity=data.get("quantity", 1),
-        )
 
-
-@dataclass
+@dataclass(frozen=True)
 class Recipe:
-    """Represents a World of Warcraft crafting recipe."""
+    """
+    A crafting recipe.
+
+    Contains information about what is crafted and the required materials.
+    """
 
     id: int
     name: str
@@ -223,40 +186,18 @@ class Recipe:
     crafted_item_name: Optional[str]
     crafted_quantity_min: int
     crafted_quantity_max: int
-    reagents: list[RecipeReagent] = field(default_factory=list)
-
-    @classmethod
-    def from_api_response(cls, data: dict[str, Any]) -> "Recipe":
-        """Create a Recipe from API response data."""
-        crafted_item = data.get("crafted_item", {})
-        crafted_quantity = data.get("crafted_quantity", {})
-
-        reagents = [RecipeReagent.from_api_response(r) for r in data.get("reagents", [])]
-
-        return cls(
-            id=data["id"],
-            name=data.get("name", "Unknown"),
-            crafted_item_id=crafted_item.get("id"),
-            crafted_item_name=crafted_item.get("name"),
-            crafted_quantity_min=crafted_quantity.get("minimum", 1),
-            crafted_quantity_max=crafted_quantity.get("maximum", 1),
-            reagents=reagents,
-        )
+    reagents: tuple[RecipeReagent, ...] = field(default_factory=tuple)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Profession:
-    """Represents a World of Warcraft profession."""
+    """
+    A crafting or gathering profession.
+
+    PRIMARY professions (2 max): Alchemy, Blacksmithing, etc.
+    SECONDARY professions: Cooking, Fishing, etc.
+    """
 
     id: int
     name: str
-    type: str  # PRIMARY or SECONDARY
-
-    @classmethod
-    def from_api_response(cls, data: dict[str, Any]) -> "Profession":
-        """Create a Profession from API response data."""
-        return cls(
-            id=data["id"],
-            name=data.get("name", "Unknown"),
-            type=data.get("type", {}).get("type", "PRIMARY"),
-        )
+    type: str  # "PRIMARY" or "SECONDARY"

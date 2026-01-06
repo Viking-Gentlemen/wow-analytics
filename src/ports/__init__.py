@@ -1,13 +1,9 @@
-"""Ports (interfaces) for the hexagonal architecture."""
+"""Ports layer - Abstract interfaces defining contracts with the outside world."""
 
-from ports.auction_house import AuctionHousePort
-from ports.items import ItemsPort
-from ports.recipes import RecipesPort
-from ports.storage import StoragePort
+from ports.blizzard_api import BlizzardAPIPort
+from ports.parquet_storage import ParquetStoragePort
 
 __all__ = [
-    "AuctionHousePort",
-    "ItemsPort",
-    "RecipesPort",
-    "StoragePort",
+    "BlizzardAPIPort",
+    "ParquetStoragePort",
 ]

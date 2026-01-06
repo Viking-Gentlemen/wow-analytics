@@ -1,110 +1,166 @@
 """
-Configuration loader with TOML support, environment variable overrides, and validation.
+Configuration loader using Pydantic v2 settings.
+
+Supports loading from:
+- Environment variables (prefix: WA_)
+- .env file
+- config.toml file
+
+Example environment variables:
+    WA_BLIZZARD__API_REGION=eu
+    WA_BLIZZARD__API_CLIENT_ID=your_client_id
+    WA_BLIZZARD__API_CLIENT_SECRET=your_secret
+    WA_STORAGE__TYPE=local
+    WA_STORAGE__LOCAL__ROOT_DIRECTORY=/data/wow-analytics
+    WA_STORAGE__S3__BUCKET=my-bucket
+    WA_STORAGE__S3__PREFIX=wow-analytics
 """
 
 from enum import Enum
 from pathlib import Path
+from typing import Any, Optional, Tuple, Type
 
-from pydantic import BaseModel, Field, field_validator, model_validator, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
-
-
-class StorageType(str, Enum):
-    """Supported storage types."""
-
-    LOCAL = "local"
-    S3 = "s3"
-    GCS = "gcs"
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
 
 
 class BlizzardAPIRegion(str, Enum):
-    """Supported Blizzard API regions."""
+    """Blizzard API regions."""
 
-    US = "us"
     EU = "eu"
+    US = "us"
     KR = "kr"
     TW = "tw"
     CN = "cn"
 
 
+class StorageType(str, Enum):
+    """Storage backend types."""
+
+    LOCAL = "local"
+    S3 = "s3"
+
+
 class BlizzardConfig(BaseModel):
     """Blizzard API configuration."""
 
-    api_region: BlizzardAPIRegion = Field(default=BlizzardAPIRegion.EU)
-    api_base_url: str = Field(default="https://eu.api.blizzard.com")
-    api_locale: str = Field(default="en_GB")
-    api_client_id: str = Field(default="")
-    api_client_secret: SecretStr = Field(default="")
+    api_region: BlizzardAPIRegion = BlizzardAPIRegion.EU
+    api_base_url: str = "https://eu.api.blizzard.com"
+    api_locale: str = "en_GB"
+    api_client_id: str = Field(default="", description="Battle.net API client ID")
+    api_client_secret: SecretStr = Field(default=SecretStr(""), description="Battle.net API client secret")
 
     @field_validator("api_client_id")
     @classmethod
     def validate_client_id(cls, v: str) -> str:
-        """Validate that client ID is provided."""
-        if not v or v.strip() == "":
-            raise ValueError("API client ID must be provided")
-        return v
-
-    @field_validator("api_client_secret")
-    @classmethod
-    def validate_client_secret(cls, v: SecretStr) -> SecretStr:
-        """Validate that client secret is provided."""
-        secret_value = v.get_secret_value() if isinstance(v, SecretStr) else v
-        if not secret_value or secret_value.strip() == "":
-            raise ValueError("API client secret must be provided")
+        """Validate client ID is not empty when used."""
         return v
 
     @field_validator("api_base_url")
     @classmethod
-    def validate_url(cls, v: str) -> str:
-        """Validate that URL is properly formatted."""
-        if not v.startswith(("http://", "https://")):
+    def validate_base_url(cls, v: str) -> str:
+        """Validate base URL format."""
+        if v and not v.startswith("http"):
             raise ValueError("API base URL must start with http:// or https://")
         return v.rstrip("/")
 
+    @model_validator(mode="after")
+    def update_base_url_for_region(self) -> "BlizzardConfig":
+        """Update base URL based on region if using default."""
+        region_urls = {
+            BlizzardAPIRegion.EU: "https://eu.api.blizzard.com",
+            BlizzardAPIRegion.US: "https://us.api.blizzard.com",
+            BlizzardAPIRegion.KR: "https://kr.api.blizzard.com",
+            BlizzardAPIRegion.TW: "https://tw.api.blizzard.com",
+            BlizzardAPIRegion.CN: "https://gateway.battlenet.com.cn",
+        }
+        if self.api_base_url == "https://eu.api.blizzard.com":
+            self.api_base_url = region_urls.get(self.api_region, self.api_base_url)
+        return self
+
 
 class LocalStorageConfig(BaseModel):
-    """Local storage configuration."""
+    """Local filesystem storage configuration."""
 
-    root_directory: Path = Field(default=Path("/tmp/wow-analytics-ah"))
+    root_directory: Path = Field(
+        default=Path("/tmp/wow-analytics"),
+        description="Root directory for local Parquet files",
+    )
+    compression: str = Field(
+        default="snappy",
+        description="Compression codec (snappy, gzip, zstd, none)",
+    )
 
     @field_validator("root_directory", mode="before")
     @classmethod
-    def validate_directory(cls, v) -> Path:
-        """Convert string to Path and validate."""
-        path = Path(v) if isinstance(v, str) else v
-        return path
+    def convert_to_path(cls, v: Any) -> Path:
+        """Convert string to Path."""
+        if isinstance(v, str):
+            return Path(v)
+        return v
+
+
+class S3StorageConfig(BaseModel):
+    """S3 storage configuration."""
+
+    bucket: str = Field(default="", description="S3 bucket name")
+    prefix: str = Field(default="", description="S3 key prefix (folder)")
+    region: str = Field(default="eu-west-1", description="AWS region")
+    compression: str = Field(
+        default="snappy",
+        description="Compression codec (snappy, gzip, zstd, none)",
+    )
+    endpoint_url: Optional[str] = Field(
+        default=None,
+        description="Custom S3 endpoint (for MinIO, LocalStack, etc.)",
+    )
+    aws_access_key_id: Optional[str] = Field(
+        default=None,
+        description="AWS access key ID (uses env/IAM if not set)",
+    )
+    aws_secret_access_key: Optional[SecretStr] = Field(
+        default=None,
+        description="AWS secret access key",
+    )
 
 
 class StorageConfig(BaseModel):
-    """Storage configuration."""
+    """Storage configuration - supports local and S3."""
 
-    type: StorageType = Field(default=StorageType.LOCAL)
+    type: StorageType = Field(
+        default=StorageType.LOCAL,
+        description="Storage backend type (local or s3)",
+    )
     local: LocalStorageConfig = Field(default_factory=LocalStorageConfig)
+    s3: S3StorageConfig = Field(default_factory=S3StorageConfig)
 
     @model_validator(mode="after")
-    def validate_storage_config(self):
-        """Ensure storage-specific config is provided."""
-        if self.type == StorageType.LOCAL and not self.local:
-            raise ValueError("Local storage configuration is required when type is 'local'")
+    def validate_storage_config(self) -> "StorageConfig":
+        """Validate that the selected storage type has required config."""
+        if self.type == StorageType.S3 and not self.s3.bucket:
+            raise ValueError("S3 bucket must be specified when using S3 storage")
         return self
 
 
 class Config(BaseSettings):
-    """Main application configuration.
+    """
+    Main application configuration.
 
-    Configuration is loaded in the following priority (highest to lowest):
-    1. Environment variables (prefix: WA_, nested delimiter: __)
-    2. .env file
-    3. config.toml file
-    4. Default values
+    Loads from environment variables (WA_ prefix), .env file, and config.toml.
     """
 
     model_config = SettingsConfigDict(
         env_prefix="WA_",
-        env_file=".env",
         env_nested_delimiter="__",
-        case_sensitive=False,
+        env_file=".env",
+        env_file_encoding="utf-8",
         toml_file="config.toml",
+        extra="ignore",
     )
 
     blizzard: BlizzardConfig = Field(default_factory=BlizzardConfig)
@@ -113,35 +169,32 @@ class Config(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: type[BaseSettings],
+        settings_cls: Type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """Customize settings sources to include TOML file."""
-        from pydantic_settings import TomlConfigSettingsSource
-
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        """Customize settings sources to include TOML."""
         return (
             init_settings,
             env_settings,
             dotenv_settings,
             TomlConfigSettingsSource(settings_cls),
-            file_secret_settings,
         )
 
+    @classmethod
+    def load(cls, toml_path: Optional[str] = None) -> "Config":
+        """
+        Load configuration from all sources.
 
-def load_config() -> Config:
-    """
-    Load configuration from TOML file with environment variable overrides.
+        Args:
+            toml_path: Optional path to TOML config file (defaults to config.toml).
 
-    Environment variables follow the pattern:
-    - WA_BLIZZARD__API_REGION
-    - WA_BLIZZARD__API_CLIENT_ID
-    - WA_STORAGE__TYPE
-    - WA_STORAGE__LOCAL__ROOT_DIRECTORY
-
-    Returns:
-        Validated Config object
-    """
-    return Config()
+        Returns:
+            Loaded Config instance.
+        """
+        if toml_path:
+            # Override TOML path in model_config
+            cls.model_config["toml_file"] = toml_path
+        return cls()
