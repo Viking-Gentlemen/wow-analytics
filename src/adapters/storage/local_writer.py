@@ -30,6 +30,7 @@ class LocalParquetWriter(ParquetStoragePort):
         self,
         root_dir: str | Path,
         default_compression: str = "snappy",
+        region: str | None = None,
     ):
         """
         Initialize the local Parquet writer.
@@ -37,11 +38,16 @@ class LocalParquetWriter(ParquetStoragePort):
         Args:
             root_dir: Root directory for all Parquet files.
             default_compression: Default compression codec (snappy, gzip, zstd, none).
+            region: Optional region name to use as root directory prefix.
 
         Raises:
             StorageError: If the directory doesn't exist or isn't writable.
         """
-        self._root_dir = Path(root_dir).resolve()
+        base_dir = Path(root_dir).resolve()
+        if region:
+            self._root_dir = base_dir / region
+        else:
+            self._root_dir = base_dir
         self._default_compression = default_compression
 
         self._validate_directory()

@@ -44,6 +44,7 @@ class S3ParquetWriter(ParquetStoragePort):
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
         endpoint_url: Optional[str] = None,
+        api_region: Optional[str] = None,
     ):
         """
         Initialize the S3 Parquet writer.
@@ -56,6 +57,7 @@ class S3ParquetWriter(ParquetStoragePort):
             aws_access_key_id: Optional AWS access key (uses env/IAM if not provided).
             aws_secret_access_key: Optional AWS secret key.
             endpoint_url: Optional custom endpoint (for S3-compatible storage like MinIO).
+            api_region: Optional Blizzard API region to use as root directory prefix.
 
         Raises:
             StorageError: If S3 dependencies are not installed.
@@ -64,7 +66,11 @@ class S3ParquetWriter(ParquetStoragePort):
             raise StorageError("S3 support requires boto3 and s3fs. " "Install with: pip install boto3 s3fs")
 
         self._bucket = bucket
-        self._prefix = prefix.strip("/")
+        base_prefix = prefix.strip("/")
+        if api_region:
+            self._prefix = f"{base_prefix}/{api_region}" if base_prefix else api_region
+        else:
+            self._prefix = base_prefix
         self._region = region
         self._default_compression = default_compression
         self._endpoint_url = endpoint_url
