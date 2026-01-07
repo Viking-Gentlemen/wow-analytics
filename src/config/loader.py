@@ -91,10 +91,6 @@ class LocalStorageConfig(BaseModel):
         default=Path("/tmp/wow-analytics"),
         description="Root directory for local Parquet files",
     )
-    compression: str = Field(
-        default="snappy",
-        description="Compression codec (snappy, gzip, zstd, none)",
-    )
 
     @field_validator("root_directory", mode="before")
     @classmethod
@@ -111,21 +107,17 @@ class S3StorageConfig(BaseModel):
     bucket: str = Field(default="", description="S3 bucket name")
     prefix: str = Field(default="", description="S3 key prefix (folder)")
     region: str = Field(default="eu-west-1", description="AWS region")
-    compression: str = Field(
-        default="snappy",
-        description="Compression codec (snappy, gzip, zstd, none)",
-    )
     endpoint_url: Optional[str] = Field(
         default=None,
         description="Custom S3 endpoint (for MinIO, LocalStack, etc.)",
     )
-    aws_access_key_id: Optional[str] = Field(
+    access_key_id: Optional[str] = Field(
         default=None,
-        description="AWS access key ID (uses env/IAM if not set)",
+        description="AWS (or equivalent) access key ID (uses env/IAM if not set)",
     )
-    aws_secret_access_key: Optional[SecretStr] = Field(
+    access_key_secret: Optional[SecretStr] = Field(
         default=None,
-        description="AWS secret access key",
+        description="AWS (or equivalent) secret access key",
     )
 
 
@@ -136,15 +128,12 @@ class StorageConfig(BaseModel):
         default=StorageType.LOCAL,
         description="Storage backend type (local or s3)",
     )
+    compression: Optional[str] = Field(
+        default="snappy",
+        description="Compression codec (snappy, gzip, zstd, none)",
+    )
     local: LocalStorageConfig = Field(default_factory=LocalStorageConfig)
     s3: S3StorageConfig = Field(default_factory=S3StorageConfig)
-
-    @model_validator(mode="after")
-    def validate_storage_config(self) -> "StorageConfig":
-        """Validate that the selected storage type has required config."""
-        if self.type == StorageType.S3 and not self.s3.bucket:
-            raise ValueError("S3 bucket must be specified when using S3 storage")
-        return self
 
 
 class Config(BaseSettings):
@@ -184,17 +173,34 @@ class Config(BaseSettings):
         )
 
     @classmethod
-    def load(cls, toml_path: Optional[str] = None) -> "Config":
+    def load(cls, toml_path: Optional[str] = None, env_path: Optional[str] = None) -> "Config":
         """
         Load configuration from all sources.
 
         Args:
-            toml_path: Optional path to TOML config file (defaults to config.toml).
+            toml_path: Optional path to TOML config file (defaults to config.toml in cwd).
+            env_path: Optional path to .env file (defaults to .env in cwd).
 
         Returns:
             Loaded Config instance.
         """
+        # Create a subclass with overridden paths to avoid mutating the base class
+        config_overrides = {}
         if toml_path:
-            # Override TOML path in model_config
-            cls.model_config["toml_file"] = toml_path
+            config_overrides["toml_file"] = toml_path
+        if env_path:
+            config_overrides["env_file"] = env_path
+
+        if config_overrides:
+            # Merge with existing model_config
+            new_model_config = {**cls.model_config, **config_overrides}
+
+            # Create a dynamic subclass with the new config
+            DynamicConfig = type(
+                "DynamicConfig",
+                (cls,),
+                {"model_config": SettingsConfigDict(**new_model_config)},
+            )
+            return DynamicConfig()
+
         return cls()
