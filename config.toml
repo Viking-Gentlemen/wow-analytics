@@ -20,3 +20,12 @@ type = "local"
 # Local directory where data files will be stored if type is set to "local"
 # Note: this directory must already exists and be writeable
 root_directory = "/tmp/wow-analytics-ah"
+
+[storage.s3]
+
+# URL of the S3 compatible endpoint: AWS S3 API, Cloudflare R2, etc...
+endpoint = "https://s3.us-east-1.amazonaws.com"
+
+# ⚠️ Highly recommended to use environment variables instead of hardcoding those secret values !
+# access_key_id = ""
+# access_key_secret = ""
